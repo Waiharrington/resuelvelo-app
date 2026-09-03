@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 
 import { prisma } from './config/database';
@@ -17,40 +15,15 @@ import adminRoutes from './routes/admin.routes';
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:8081',
-    methods: ['GET', 'POST']
-  }
-});
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:8081',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Socket.IO
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  socket.on('join_room', (roomId: string) => {
-    socket.join(roomId);
-    console.log(`User ${socket.id} joined room ${roomId}`);
-  });
-  
-  socket.on('send_message', (data) => {
-    io.to(data.roomId).emit('new_message', data);
-  });
-  
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-// Make io accessible to routes
-app.set('io', io);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -66,6 +39,25 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    name: 'Resuélvelo API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      posts: '/api/posts',
+      offers: '/api/offers',
+      chat: '/api/chat',
+      transactions: '/api/transactions',
+      admin: '/api/admin'
+    }
+  });
+});
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
@@ -75,10 +67,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
+// Export for Vercel serverless
+export default app;
+
+// For local development
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-export { app, io };
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
