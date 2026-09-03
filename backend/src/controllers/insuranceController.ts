@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
-import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 
 export const getInsuranceFund = async (req: Request, res: Response) => {
   try {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { authenticate } from '../middleware/auth.middleware';
 import {
   getInsuranceFund,
   fileInsuranceClaim,
@@ -14,8 +14,8 @@ const router = Router();
 router.get('/fund', getInsuranceFund);
 
 // Protected routes
-router.post('/claim', authMiddleware, fileInsuranceClaim);
-router.get('/claims', authMiddleware, getInsuranceClaims);
-router.put('/claims/:claimId', authMiddleware, updateClaimStatus);
+router.post('/claim', authenticate, fileInsuranceClaim);
+router.get('/claims', authenticate, getInsuranceClaims);
+router.put('/claims/:claimId', authenticate, updateClaimStatus);
 
 export default router;
