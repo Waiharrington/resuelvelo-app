@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth.middleware';
 import {
   getInsuranceFund,
   fileInsuranceClaim,
