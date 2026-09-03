@@ -1,0 +1,206 @@
+generator client {
+  provider      = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["resuelve"]
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String?   @unique
+  phone         String?   @unique
+  passwordHash  String?
+  fullName      String    @map("full_name")
+  userType      String    @map("user_type") // client, provider, admin
+  avatarUrl     String?   @map("avatar_url")
+  location      Json?
+  isVerified    Boolean   @default(false) @map("is_verified")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  providerVerification ProviderVerification?
+  posts                Post[]
+  offers               Offer[]
+  reviewsGiven         Review[] @relation("Reviewer")
+  reviewsReceived      Review[] @relation("Reviewee")
+  messagesSent         Message[] @relation("Sender")
+  messagesReceived     Message[] @relation("Receiver")
+  incidentsReported    Incident[] @relation("IncidentReporter")
+  transactionsAsClient   Transaction[] @relation("TransactionClient")
+  transactionsAsProvider Transaction[] @relation("TransactionProvider")
+
+  @@map("users")
+  @@schema("resuelve")
+}
+
+model ProviderVerification {
+  id                    String    @id @default(uuid()) @db.Uuid
+  providerId            String    @unique @map("provider_id") @db.Uuid
+  idDocumentUrl         String?   @map("id_document_url")
+  proofOfAddressUrl     String?   @map("proof_of_address_url")
+  references            Json?
+  criminalRecordUrl     String?   @map("criminal_record_url")
+  psychologicalTestScore Int?     @map("psychological_test_score")
+  verificationStatus    String    @default("pending") @map("verification_status") // pending, approved, rejected
+  verifiedAt            DateTime? @map("verified_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  provider User @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("provider_verifications")
+  @@schema("resuelve")
+}
+
+model Category {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  description String?
+  icon        String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  posts Post[]
+
+  @@map("categories")
+  @@schema("resuelve")
+}
+
+model Post {
+  id          String    @id @default(uuid()) @db.Uuid
+  clientId    String    @map("client_id") @db.Uuid
+  categoryId  String    @map("category_id") @db.Uuid
+  title       String
+  description String
+  photosUrls  Json?     @map("photos_urls")
+  location    Json?
+  budget      Decimal   @db.Decimal(10, 2)
+  deadline    DateTime?
+  status      String    @default("active") // active, closed, completed, cancelled
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  client     User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category   Category      @relation(fields: [categoryId], references: [id])
+  offers     Offer[]
+  transactions Transaction[]
+
+  @@map("posts")
+  @@schema("resuelve")
+}
+
+model Offer {
+  id         String    @id @default(uuid()) @db.Uuid
+  postId     String    @map("post_id") @db.Uuid
+  providerId String    @map("provider_id") @db.Uuid
+  price      Decimal   @db.Decimal(10, 2)
+  message    String?
+  status     String    @default("pending") // pending, accepted, rejected, withdrawn
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  provider User @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("offers")
+  @@schema("resuelve")
+}
+
+model Transaction {
+  id            String   @id @default(uuid()) @db.Uuid
+  postId        String   @map("post_id") @db.Uuid
+  clientId      String   @map("client_id") @db.Uuid
+  providerId    String   @map("provider_id") @db.Uuid
+  amount        Decimal  @db.Decimal(10, 2)
+  commission    Decimal  @db.Decimal(10, 2)
+  insuranceFee  Decimal  @map("insurance_fee") @db.Decimal(10, 2)
+  status        String   @default("pending") // pending, in_progress, completed, disputed, refunded
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  post     Post     @relation(fields: [postId], references: [id])
+  client   User     @relation("TransactionClient", fields: [clientId], references: [id])
+  provider User     @relation("TransactionProvider", fields: [providerId], references: [id])
+  review   Review?
+  incident Incident?
+
+  @@map("transactions")
+  @@schema("resuelve")
+}
+
+model Review {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @unique @map("transaction_id") @db.Uuid
+  reviewerId    String   @map("reviewer_id") @db.Uuid
+  revieweeId    String   @map("reviewee_id") @db.Uuid
+  rating        Int      // 1-5
+  comment       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  reviewer    User        @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee    User        @relation("Reviewee", fields: [revieweeId], references: [id])
+
+  @@map("reviews")
+  @@schema("resuelve")
+}
+
+model Incident {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @unique @map("transaction_id") @db.Uuid
+  reporterId    String   @map("reporter_id") @db.Uuid
+  description   String
+  evidenceUrls  Json?    @map("evidence_urls")
+  status        String   @default("open") // open, investigating, resolved, closed
+  resolution    String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  reporter    User        @relation("IncidentReporter", fields: [reporterId], references: [id])
+
+  @@map("incidents")
+  @@schema("resuelve")
+}
+
+model Message {
+  id         String   @id @default(uuid()) @db.Uuid
+  senderId   String   @map("sender_id") @db.Uuid
+  receiverId String   @map("receiver_id") @db.Uuid
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender   User @relation("Sender", fields: [senderId], references: [id])
+  receiver User @relation("Receiver", fields: [receiverId], references: [id])
+
+  @@map("messages")
+  @@schema("resuelve")
+}
+
+model InsuranceFund {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  amount      Decimal  @db.Decimal(10, 2)
+  type        String   // charge, payout
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("insurance_fund")
+  @@schema("resuelve")
+}
+
+model Wallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  balance   Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("wallets")
+  @@schema("resuelve")
+}
