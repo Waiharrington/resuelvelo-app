@@ -7,6 +7,13 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CreatePostScreen } from '../screens/CreatePostScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
+import { PostDetailScreen } from '../screens/PostDetailScreen';
+import { MakeOfferScreen } from '../screens/MakeOfferScreen';
+import { ChatScreen } from '../screens/ChatScreen';
+import { ChatsListScreen } from '../screens/ChatsListScreen';
+import { WalletScreen } from '../screens/WalletScreen';
+import { VerificationScreen } from '../screens/VerificationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -31,7 +38,13 @@ export const AppNavigator: React.FC = () => {
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="CreatePost" component={CreatePostScreen} />
-            {/* Add more screens here */}
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+            <Stack.Screen name="MakeOffer" component={MakeOfferScreen} />
+            <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen name="Chats" component={ChatsListScreen} />
+            <Stack.Screen name="Wallet" component={WalletScreen} />
+            <Stack.Screen name="Verification" component={VerificationScreen} />
           </>
         )}
       </Stack.Navigator>

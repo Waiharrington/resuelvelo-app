@@ -11,6 +11,8 @@ import offerRoutes from './routes/offer.routes';
 import chatRoutes from './routes/chat.routes';
 import transactionRoutes from './routes/transaction.routes';
 import adminRoutes from './routes/admin.routes';
+import webhookRoutes from './routes/webhook';
+import insuranceRoutes from './routes/insurance';
 
 dotenv.config();
 
@@ -33,6 +35,8 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/insurance', insuranceRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -53,7 +57,9 @@ app.get('/', (req, res) => {
       offers: '/api/offers',
       chat: '/api/chat',
       transactions: '/api/transactions',
-      admin: '/api/admin'
+      admin: '/api/admin',
+      webhooks: '/api/webhooks',
+      insurance: '/api/insurance'
     }
   });
 });
