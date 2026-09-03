@@ -5,24 +5,26 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 export const getInsuranceFund = async (req: Request, res: Response) => {
   try {
-    const fund = await prisma.insuranceFund.findUnique({
-      where: { id: 'default' }
+    const charges = await prisma.insuranceFund.aggregate({
+      where: { type: 'charge' },
+      _sum: { amount: true }
     });
 
-    if (!fund) {
-      return res.json({
-        success: true,
-        data: {
-          balance: 0,
-          totalClaims: 0,
-          totalPayouts: 0
-        }
-      });
-    }
+    const payouts = await prisma.insuranceFund.aggregate({
+      where: { type: 'payout' },
+      _sum: { amount: true }
+    });
+
+    const totalCharges = Number(charges._sum.amount || 0);
+    const totalPayouts = Number(payouts._sum.amount || 0);
 
     res.json({
       success: true,
-      data: fund
+      data: {
+        balance: totalCharges - totalPayouts,
+        totalCharges,
+        totalPayouts
+      }
     });
   } catch (error) {
     console.error('Error getting insurance fund:', error);
@@ -35,10 +37,9 @@ export const getInsuranceFund = async (req: Request, res: Response) => {
 
 export const fileInsuranceClaim = async (req: AuthRequest, res: Response) => {
   try {
-    const { transactionId, reason, amount, evidence } = req.body;
+    const { transactionId, reason, evidence } = req.body;
     const userId = req.user?.id;
 
-    // Verify transaction exists and user is involved
     const transaction = await prisma.transaction.findUnique({
       where: { id: transactionId },
       include: { client: true, provider: true }
@@ -58,12 +59,8 @@ export const fileInsuranceClaim = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if claim already exists for this transaction
     const existingClaim = await prisma.incident.findFirst({
-      where: {
-        transactionId,
-        type: 'insurance_claim'
-      }
+      where: { transactionId }
     });
 
     if (existingClaim) {
@@ -73,15 +70,13 @@ export const fileInsuranceClaim = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Create incident/claim
     const claim = await prisma.incident.create({
       data: {
         transactionId,
         reporterId: userId!,
-        type: 'insurance_claim',
         description: reason,
-        status: 'pending',
-        evidence: evidence || []
+        status: 'open',
+        evidenceUrls: evidence || []
       }
     });
 
@@ -106,9 +101,7 @@ export const getInsuranceClaims = async (req: AuthRequest, res: Response) => {
     let claims;
 
     if (userType === 'admin') {
-      // Admin can see all claims
       claims = await prisma.incident.findMany({
-        where: { type: 'insurance_claim' },
         include: {
           transaction: true,
           reporter: {
@@ -118,12 +111,8 @@ export const getInsuranceClaims = async (req: AuthRequest, res: Response) => {
         orderBy: { createdAt: 'desc' }
       });
     } else {
-      // Regular users can only see their own claims
       claims = await prisma.incident.findMany({
-        where: {
-          type: 'insurance_claim',
-          reporterId: userId
-        },
+        where: { reporterId: userId },
         include: {
           transaction: true,
           reporter: {
@@ -162,26 +151,24 @@ export const updateClaimStatus = async (req: AuthRequest, res: Response) => {
 
     const claim = await prisma.incident.update({
       where: { id: claimId },
-      data: {
-        status,
-        resolution
-      }
+      data: { status, resolution }
     });
 
-    // If approved, process payout from insurance fund
     if (status === 'resolved' && resolution === 'approved') {
       const transaction = await prisma.transaction.findUnique({
         where: { id: claim.transactionId }
       });
 
       if (transaction) {
-        // Deduct from insurance fund and refund to affected party
-        await prisma.insuranceFund.update({
-          where: { id: 'default' },
-          data: { balance: { decrement: transaction.amount } }
+        await prisma.insuranceFund.create({
+          data: {
+            userId: transaction.clientId,
+            amount: transaction.amount,
+            type: 'payout',
+            description: `Payout for claim ${claimId}`
+          }
         });
 
-        // Refund to client
         await prisma.wallet.upsert({
           where: { userId: transaction.clientId },
           update: { balance: { increment: transaction.amount } },
