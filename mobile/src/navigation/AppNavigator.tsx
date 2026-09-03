@@ -5,13 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
-import { HomeScreen } from '../screens/HomeScreen';
+import { BottomTabNavigator } from './BottomTabNavigator';
 import { CreatePostScreen } from '../screens/CreatePostScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
 import { PostDetailScreen } from '../screens/PostDetailScreen';
 import { MakeOfferScreen } from '../screens/MakeOfferScreen';
 import { ChatScreen } from '../screens/ChatScreen';
-import { ChatsListScreen } from '../screens/ChatsListScreen';
 import { WalletScreen } from '../screens/WalletScreen';
 import { VerificationScreen } from '../screens/VerificationScreen';
 
@@ -36,13 +34,11 @@ export const AppNavigator: React.FC = () => {
         ) : (
           // App Stack
           <>
-            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Main" component={BottomTabNavigator} />
             <Stack.Screen name="CreatePost" component={CreatePostScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="PostDetail" component={PostDetailScreen} />
             <Stack.Screen name="MakeOffer" component={MakeOfferScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
-            <Stack.Screen name="Chats" component={ChatsListScreen} />
             <Stack.Screen name="Wallet" component={WalletScreen} />
             <Stack.Screen name="Verification" component={VerificationScreen} />
           </>
